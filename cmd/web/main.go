@@ -5,20 +5,37 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jota-oliveira/gocourse/pkg/config"
 	"github.com/jota-oliveira/gocourse/pkg/handlers"
+	"github.com/jota-oliveira/gocourse/pkg/render"
 )
 
 var portNumber = ":8081"
 
 func main() {
-    http.HandleFunc("/", handlers.Home)
-    http.HandleFunc("/about", handlers.About)
+    var app config.AppConfig
 
-    err := http.ListenAndServe(portNumber, nil)
+    tc, err := render.CreateTemplateCache()
 
     if err != nil {
-        log.Fatal("ListenAndServe: ", err)
+        log.Fatal("Cannot create template cache")
     }
+
+    app.TemplateCache = tc
+    app.UseCache = false
+
+    repo := handlers.NewRepo(&app)
+    handlers.NewHandlers(repo)
+
+    render.NewTemplates(&app)
+
+    serve := &http.Server {
+        Addr: portNumber,
+        Handler: routes(&app),
+    }
+
+    err = serve.ListenAndServe()
+    log.Fatal(err)
 
     fmt.Println("Server is running on port", portNumber)
 }
